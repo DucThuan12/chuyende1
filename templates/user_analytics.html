@@ -1,0 +1,198 @@
+
+{% extends "base.html" %}
+{% block body %}
+<header class="topbar modern-topbar">
+    <div class="brand-wrap">
+        <a class="brand-link" href="{{ url_for('home') }}">
+            <div class="brand-badge small">FitMotion</div>
+        </a>
+    </div>
+
+    <nav class="nav-center modern-nav">
+        <a class="nav-link" href="{{ url_for('user_dashboard') }}">Tổng quan</a>
+        <a class="nav-link" href="{{ url_for('user_exercises') }}">Động tác</a>
+        <a class="nav-link" href="{{ url_for('user_workout_redirect') }}">Luyện tập</a>
+        <a class="nav-link active" href="{{ url_for('user_analytics') }}">Phân tích</a>
+        <a class="nav-link" href="{{ url_for('user_profile') }}">Hồ sơ</a>
+    </nav>
+
+    <div class="user-menu glass-chip">
+        <span>{{ user.fullname if user.fullname is defined else user.name }}</span>
+        <a href="{{ url_for('logout') }}">Đăng xuất</a>
+    </div>
+</header>
+
+<main class="dashboard-page">
+    <section class="hero-panel">
+        <div class="hero-left">
+            <p class="eyebrow">Phân tích luyện tập</p>
+            <h1>Thống kê theo tuần</h1>
+            <p class="hero-text">Theo dõi rep trong tuần, lỗi kỹ thuật, calo và các buổi tập gần nhất theo thời gian thực.</p>
+        </div>
+        <div class="hero-right">
+            <div class="hero-mini-card">
+                <div class="mini-label">Tuần đang xem</div>
+                <div class="mini-number" id="analyticsWeekRange">{{ dashboard.week_start }} đến {{ dashboard.week_end }}</div>
+            </div>
+            <div class="hero-mini-card">
+                <div class="mini-label">Trạng thái</div>
+                <div class="mini-number" id="analyticsWeekStatus">{{ 'Hoàn thành' if dashboard.weekly_completed else 'Đang theo dõi' }}</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="analysis-wrap analytics-main-grid">
+        <div class="panel">
+            <div class="panel-head">
+                <div>
+                    <p class="panel-tag">Tổng hợp tuần</p>
+                    <h2>Tiến độ luyện tập</h2>
+                </div>
+            </div>
+            <div class="stat-grid">
+                <div class="stat-card dark-accent">
+                    <span>Tiến độ hiện tại</span>
+                    <strong id="analyticsProgressNumber">{{ dashboard.done_count }}/{{ dashboard.weekly_target }}</strong>
+                    <small id="analyticsProgressText">{{ dashboard.progress_percent }}% kế hoạch tuần</small>
+                </div>
+                <div class="stat-card">
+                    <span>Rep mục tiêu tuần</span>
+                    <strong id="analyticsWeeklyTarget">{{ dashboard.weekly_target }}</strong>
+                    <small id="analyticsWeeklyRemaining">Còn thiếu {{ dashboard.weekly_remaining }} rep</small>
+                </div>
+                <div class="stat-card">
+                    <span>Tổng lỗi tuần</span>
+                    <strong id="analyticsTotalErrors">{{ dashboard.total_errors }}</strong>
+                    <small>Các lần cần chỉnh kỹ thuật</small>
+                </div>
+                <div class="stat-card">
+                    <span>Calo tuần</span>
+                    <strong id="analyticsCalories">{{ dashboard.calories }}</strong>
+                    <small>Đơn vị kcal</small>
+                </div>
+            </div>
+            <div id="analyticsWeeklyMessage" class="goal-alert {% if dashboard.weekly_completed %}goal-alert-success{% else %}goal-alert-warning{% endif %}" style="margin-top:16px;">
+                {{ dashboard.weekly_message }}
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-head">
+                <div>
+                    <p class="panel-tag">Phân tích lỗi</p>
+                    <h2>Số lần lỗi và lý do</h2>
+                </div>
+            </div>
+            <div class="error-reason-list" id="analyticsErrorReasonList">
+                {% for item in dashboard.error_reason_items %}
+                <div class="error-reason-card">
+                    <div class="error-reason-top">
+                        <span>{{ item.title }}</span>
+                        <strong>{{ item.count }}</strong>
+                    </div>
+                    <p>{{ item.reason }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="analysis-wrap single-column-grid">
+        <div class="panel analytics-history-panel dashboard-wide-panel">
+            <div class="panel-head">
+                <div>
+                    <p class="panel-tag">Buổi tập gần đây</p>
+                    <h2>Lịch sử session trong tuần</h2>
+                </div>
+            </div>
+            <div class="exercise-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Bài tập</th>
+                            <th>Ngày tập</th>
+                            <th>Tổng rep</th>
+                            <th>Rep ghi nhận</th>
+                            <th>Lỗi</th>
+                                                    </tr>
+                    </thead>
+                    <tbody id="analyticsSessionBody">
+                        {% if recent_sessions %}
+                            {% for item in recent_sessions %}
+                            <tr>
+                                <td>{{ item.created_at }}</td>
+                                <td>{{ item.exercise_name }}</td>
+                                <td>{{ item.session_date }}</td>
+                                <td>{{ item.total_rep }}</td>
+                                <td>{{ item.good_rep }}</td>
+                                <td>{{ item.total_error }}</td>
+                                                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="6">Chưa có dữ liệu buổi tập trong tuần này.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+<script>
+async function pollWeeklyAnalytics() {
+    try {
+        const res = await fetch("{{ url_for('weekly_summary_api') }}");
+        const data = await res.json();
+        if (!data.success) return;
+        const d = data.dashboard;
+        const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+        setText('analyticsWeekRange', `${d.week_start} đến ${d.week_end}`);
+        setText('analyticsWeekStatus', d.weekly_completed ? 'Hoàn thành' : 'Đang theo dõi');
+        setText('analyticsProgressNumber', `${d.done_count}/${d.weekly_target}`);
+        setText('analyticsProgressText', `${d.progress_percent}% kế hoạch tuần`);
+        setText('analyticsWeeklyTarget', d.weekly_target);
+        setText('analyticsWeeklyRemaining', d.weekly_completed ? 'Đã hoàn thành mục tiêu tuần' : `Còn thiếu ${d.weekly_remaining} rep`);
+        setText('analyticsTotalErrors', d.total_errors);
+        setText('analyticsCalories', d.calories);
+                const msg = document.getElementById('analyticsWeeklyMessage');
+        if (msg) {
+            msg.textContent = d.weekly_message;
+            msg.classList.toggle('goal-alert-success', !!d.weekly_completed);
+            msg.classList.toggle('goal-alert-warning', !d.weekly_completed);
+        }
+        const errorWrap = document.getElementById('analyticsErrorReasonList');
+        if (errorWrap && d.error_reason_items) {
+            errorWrap.innerHTML = d.error_reason_items.map(item => `
+                <div class="error-reason-card">
+                    <div class="error-reason-top">
+                        <span>${item.title}</span>
+                        <strong>${item.count}</strong>
+                    </div>
+                    <p>${item.reason}</p>
+                </div>`).join('');
+        }
+        const tbody = document.getElementById('analyticsSessionBody');
+        if (tbody) {
+            if (data.recent_sessions && data.recent_sessions.length) {
+                tbody.innerHTML = data.recent_sessions.map(item => `
+                    <tr>
+                        <td>${item.created_at}</td>
+                        <td>${item.exercise_name}</td>
+                        <td>${item.session_date}</td>
+                        <td>${item.total_rep}</td>
+                        <td>${item.good_rep}</td>
+                        <td>${item.total_error}</td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6">Chưa có dữ liệu buổi tập trong tuần này.</td></tr>';
+            }
+        }
+    } catch (e) {
+        console.log('Khong cap nhat duoc thong ke tuan', e);
+    }
+}
+pollWeeklyAnalytics();
+setInterval(pollWeeklyAnalytics, 2000);
+</script>
+{% endblock %}

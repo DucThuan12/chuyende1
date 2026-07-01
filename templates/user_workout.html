@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+{% block body %}
+<header class="topbar modern-topbar">
+    <div class="brand-wrap">
+        <a class="brand-link" href="{{ url_for('home') }}">
+            <div class="brand-badge small">FitMotion</div>
+        </a>
+    </div>
+
+    <nav class="nav-center modern-nav">
+        <a class="nav-link" href="{{ url_for('user_dashboard') }}">Tổng quan</a>
+        <a class="nav-link" href="{{ url_for('user_exercises') }}">Động tác</a>
+        <a class="nav-link active" href="{{ url_for('user_workout', slug=exercise.slug) }}">Luyện tập</a>
+    </nav>
+
+    <div class="user-menu glass-chip">
+        <span>{{ user.name }}</span>
+        <a href="{{ url_for('logout') }}">Đăng xuất</a>
+    </div>
+</header>
+
+<main class="dashboard-page">
+    {% if emergency_audio_exists %}
+    <audio id="emergencyAudio" src="{{ emergency_audio_url }}" preload="auto" loop></audio>
+    {% endif %}
+
+    <div id="emergencyOverlay" class="emergency-overlay">
+        <div class="emergency-box">
+            <h2>CẢNH BÁO KHẨN CẤP</h2>
+            <p id="emergencyReason">Phát hiện sự cố bất thường khi tập luyện.</p>
+            <div class="emergency-actions">
+                <button id="resetEmergencyBtn" class="btn btn-warning">Tắt cảnh báo / Tôi vẫn ổn</button>
+            </div>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-box">
+          {% for msg in messages %}
+            <p>{{ msg }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if warning_text %}
+    <div class="warning-box">
+        {{ warning_text }}
+    </div>
+    {% endif %}
+
+    <section class="workout-three-col">
+        <div class="panel video-panel">
+            <div class="panel-head">
+                <div>
+                    <p class="panel-tag">Camera AI</p>
+                    <h2>{{ exercise.name }}</h2>
+                </div>
+            </div>
+
+            <div class="video-stream-box">
+                <img src="{{ url_for('video_feed', slug=exercise.slug) }}" class="video-stream">
+            </div>
+        </div>
+
+        <div class="panel unity-preview-panel">
+            <div class="panel-head">
+                <div>
+                    <p class="panel-tag">Mô hình hướng dẫn</p>
+                    <h2>Unity / 3D / AR</h2>
+                </div>
+            </div>
+
+            <div class="unity-placeholder">
+                {% if exercise.fbx_path %}
+                    <p>Đã có file FBX:</p>
+                    <div class="fbx-chip">{{ exercise.fbx_path }}</div>
+                {% else %}
+                    <p>Chưa gắn file FBX cho bài tập này.</p>
+                {% endif %}
+                <div class="placeholder-box">
+                    KHU VỰC NHÚNG UNITY WEBGL / MODEL 3D / VIDEO MẪU
+                </div>
+            </div>
+
+            <div class="exercise-info-block">
+                <h3>Hướng dẫn nhanh</h3>
+                <p>{{ exercise.guide_text }}</p>
+                <h3>Phù hợp</h3>
+                <p>{{ exercise.suitable_for }}</p>
+                <h3>Lưu ý</h3>
+                <p>{{ exercise.caution_for }}</p>
+            </div>
+        </div>
+
+        <div class="panel metrics-panel">
+            <div class="panel-head">
+                <div>
+                    <p class="panel-tag">Buổi tập hiện tại</p>
+                    <h2>Chỉ số realtime</h2>
+                </div>
+            </div>
+
+            <div class="summary-row compact-summary">
+                <div class="summary-box">
+                    <span>Rep hiện tại</span>
+                    <strong id="liveTotalRep">0</strong>
+                </div>
+                <div class="summary-box">
+                    <span>Rep ghi nhận</span>
+                    <strong id="liveGoodRep">0</strong>
+                </div>
+                <div class="summary-box">
+                    <span>Cần chỉnh</span>
+                    <strong id="liveBadRep">0</strong>
+                </div>
+            </div>
+
+            <div class="criterion-card workout-goal-card">
+                <strong>Mục tiêu buổi tập</strong>
+                <p>Ngày tập: <span id="workoutDateText">{{ session_date }}</span></p>
+                <p>Rep khuyến nghị theo hồ sơ: <strong id="targetRepText">{{ recommended_target }}</strong></p>
+                <p>Tiến độ hôm nay: <strong id="todayDoneText">{{ today_summary.done_rep }}</strong> / <strong id="todayTargetText">{{ today_summary.daily_target }}</strong></p>
+                <p id="todayStatusText">
+                    {% if today_summary.completed %}
+                    Bạn đã hoàn thành mục tiêu hôm nay.
+                    {% else %}
+                    Hôm nay bạn còn thiếu {{ today_summary.remaining_rep }} rep để đạt mục tiêu.
+                    {% endif %}
+                </p>
+            </div>
+
+            <form method="POST" class="admin-form workout-settings-form">
+                <div class="form-grid">
+                    <div>
+                        <label>Ngày tập</label>
+                        <input id="workoutDateInput" type="date" name="workout_date" value="{{ session_date }}" required>
+                    </div>
+                    <div>
+                        <label>Số set</label>
+                        <input type="number" name="set_count" value="{{ set_count }}" min="1">
+                    </div>
+                    <div>
+                        <label>Rep mục tiêu</label>
+                        <input id="repTargetInput" type="number" name="rep_target" value="{{ recommended_target }}" min="1">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-secondary btn-full">Cập nhật mục tiêu buổi tập</button>
+            </form>
+
+            <div class="workout-action-stack">
+                <button type="button" class="btn btn-primary btn-full" id="finishWorkoutBtn">Kết thúc bài tập</button>
+                <a href="{{ url_for('user_exercises') }}" class="btn btn-outline btn-full">Tập bài khác</a>
+            </div>
+
+            <div class="criteria-block">
+                <h3>Tiêu chí đánh giá</h3>
+                {% if criteria %}
+                    {% for c in criteria %}
+                    <div class="criterion-card">
+                        <strong>{{ c.title }}</strong>
+                        <div>{{ c.joint_name }} {{ c.operator }} {{ c.angle_value }}</div>
+                        <small>{{ c.message_text }}</small>
+                        {% if c.audio_path %}
+                        <audio controls src="{{ url_for('static', filename=c.audio_path) }}"></audio>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="criterion-card">
+                        Chưa có tiêu chí đánh giá do admin cấu hình.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+<script>
+    const warningText = {{ (warning_text or '') | tojson }};
+    const emergencyOverlay = document.getElementById("emergencyOverlay");
+    const emergencyReason = document.getElementById("emergencyReason");
+    const resetEmergencyBtn = document.getElementById("resetEmergencyBtn");
+    const emergencyAudio = document.getElementById("emergencyAudio");
+    const finishWorkoutBtn = document.getElementById("finishWorkoutBtn");
+
+    const liveTotalRep = document.getElementById("liveTotalRep");
+    const liveGoodRep = document.getElementById("liveGoodRep");
+    const liveBadRep = document.getElementById("liveBadRep");
+    const targetRepText = document.getElementById("targetRepText");
+    const todayDoneText = document.getElementById("todayDoneText");
+    const todayTargetText = document.getElementById("todayTargetText");
+    const todayStatusText = document.getElementById("todayStatusText");
+    const workoutDateText = document.getElementById("workoutDateText");
+    const workoutDateInput = document.getElementById("workoutDateInput");
+    const repTargetInput = document.getElementById("repTargetInput");
+
+    let alarmPlaying = false;
+    let finishInProgress = false;
+
+    let currentWorkoutState = {
+        total_rep: 0,
+        good_rep: 0,
+        bad_rep: 0,
+        display_good_rep: 0,
+        display_bad_rep: 0,
+        phase_start_error: 0,
+        phase_middle_error: 0,
+        phase_end_error: 0,
+        target_rep: parseInt(targetRepText?.textContent || "0", 10) || 0,
+        today_done: 0,
+        today_target: 0,
+        today_remaining: 0,
+        today_completed: false
+    };
+
+    if (workoutDateInput && workoutDateText) {
+        workoutDateText.textContent = workoutDateInput.value || workoutDateText.textContent.trim();
+        workoutDateInput.addEventListener("change", () => {
+            workoutDateText.textContent = workoutDateInput.value || "";
+        });
+    }
+
+    if (repTargetInput && targetRepText) {
+        repTargetText.textContent = repTargetInput.value || targetRepText.textContent.trim();
+        repTargetInput.addEventListener("input", () => {
+            targetRepText.textContent = repTargetInput.value || "0";
+            currentWorkoutState.target_rep = parseInt(repTargetInput.value || "0", 10) || 0;
+        });
+    }
+
+    if (warningText) {
+        setInterval(() => {
+            alert(warningText + "\nKhuyến nghị: Bạn nên nghỉ ngơi và giảm cường độ tập nếu thấy mệt.");
+        }, 60000);
+    }
+
+    async function pollEmergencyStatus() {
+        try {
+            const res = await fetch("{{ url_for('emergency_status_api', slug=exercise.slug) }}", { cache: "no-store" });
+            const data = await res.json();
+
+            if (data.active) {
+                emergencyOverlay.classList.add("show");
+                emergencyReason.textContent = data.reason || "Phát hiện sự cố bất thường khi tập luyện.";
+
+                if (emergencyAudio && !alarmPlaying) {
+                    emergencyAudio.play().then(() => {
+                        alarmPlaying = true;
+                    }).catch(() => {});
+                }
+            } else {
+                emergencyOverlay.classList.remove("show");
+                if (emergencyAudio && alarmPlaying) {
+                    emergencyAudio.pause();
+                    emergencyAudio.currentTime = 0;
+                    alarmPlaying = false;
+                }
+            }
+        } catch (e) {
+            console.log("Khong lay duoc trang thai khan cap", e);
+        }
+    }
+
+    async function pollLiveWorkout() {
+        try {
+            const res = await fetch("{{ url_for('live_workout_api', slug=exercise.slug) }}", { cache: "no-store" });
+            const data = await res.json();
+            if (!data.success) return;
+
+            currentWorkoutState = {
+                total_rep: Number(data.total_rep || 0),
+                good_rep: Number(data.good_rep || 0),
+                bad_rep: Number(data.bad_rep || 0),
+                display_good_rep: Number(data.display_good_rep ?? data.good_rep ?? data.total_rep ?? 0),
+                display_bad_rep: Number(data.display_bad_rep ?? data.bad_rep ?? 0),
+                phase_start_error: Number(data.phase_start_error || 0),
+                phase_middle_error: Number(data.phase_middle_error || 0),
+                phase_end_error: Number(data.phase_end_error || 0),
+                target_rep: Number(data.target_rep || (repTargetInput?.value || 0)),
+                today_done: Number(data.today_done || 0),
+                today_target: Number(data.today_target || 0),
+                today_remaining: Number(data.today_remaining || 0),
+                today_completed: Boolean(data.today_completed)
+            };
+
+            liveTotalRep.textContent = currentWorkoutState.total_rep;
+            liveGoodRep.textContent = currentWorkoutState.display_good_rep;
+            liveBadRep.textContent = currentWorkoutState.display_bad_rep;
+            targetRepText.textContent = currentWorkoutState.target_rep;
+            todayDoneText.textContent = currentWorkoutState.today_done;
+            todayTargetText.textContent = currentWorkoutState.today_target;
+
+            if (data.today_completed) {
+                todayStatusText.textContent = "Bạn đã hoàn thành mục tiêu hôm nay.";
+                todayStatusText.classList.add("status-complete");
+                todayStatusText.classList.remove("status-pending");
+            } else {
+                todayStatusText.textContent = `Hôm nay bạn còn thiếu ${data.today_remaining} rep để đạt mục tiêu.`;
+                todayStatusText.classList.add("status-pending");
+                todayStatusText.classList.remove("status-complete");
+            }
+        } catch (e) {
+            console.log("Khong lay duoc trang thai buoi tap", e);
+        }
+    }
+
+    async function finishWorkout() {
+        if (finishInProgress) return;
+
+        await pollLiveWorkout();
+
+        const sessionDate = (workoutDateInput?.value || workoutDateText.textContent || "").trim();
+        const payload = {
+            session_date: sessionDate,
+            total_rep: Number(currentWorkoutState.total_rep || 0),
+            good_rep: Number(currentWorkoutState.good_rep || 0),
+            display_good_rep: Number(currentWorkoutState.display_good_rep || 0),
+            bad_rep: Number(currentWorkoutState.bad_rep || 0),
+            phase_start_error: Number(currentWorkoutState.phase_start_error || 0),
+            phase_middle_error: Number(currentWorkoutState.phase_middle_error || 0),
+            phase_end_error: Number(currentWorkoutState.phase_end_error || 0),
+            target_rep: Number(currentWorkoutState.target_rep || 0)
+        };
+
+        if (payload.total_rep <= 0) {
+            alert("Chưa ghi nhận rep nào trong buổi tập.");
+            return;
+        }
+
+        finishInProgress = true;
+        if (finishWorkoutBtn) {
+            finishWorkoutBtn.disabled = true;
+            finishWorkoutBtn.textContent = "Đang lưu buổi tập...";
+        }
+
+        try {
+            const res = await fetch("{{ url_for('finish_workout_api', slug=exercise.slug) }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                alert(data.message || "Chưa thể kết thúc buổi tập.");
+                return;
+            }
+
+            const nextStep = confirm(
+                `${data.message}\n\nChọn OK để quay về Tổng quan.\nChọn Cancel để tiếp tục chọn bài tập khác.`
+            );
+
+            if (nextStep) {
+                window.location.href = data.redirect_url;
+            } else {
+                window.location.href = "{{ url_for('user_exercises') }}";
+            }
+        } catch (e) {
+            console.log("Loi finish workout", e);
+            alert("Có lỗi khi kết thúc bài tập.");
+        } finally {
+            finishInProgress = false;
+            if (finishWorkoutBtn) {
+                finishWorkoutBtn.disabled = false;
+                finishWorkoutBtn.textContent = "Kết thúc bài tập";
+            }
+        }
+    }
+
+    if (finishWorkoutBtn) {
+        finishWorkoutBtn.addEventListener("click", finishWorkout);
+    }
+
+    if (resetEmergencyBtn) {
+        resetEmergencyBtn.addEventListener("click", async () => {
+            try {
+                await fetch("{{ url_for('reset_emergency_api', slug=exercise.slug) }}", {
+                    method: "POST"
+                });
+                emergencyOverlay.classList.remove("show");
+                if (emergencyAudio) {
+                    emergencyAudio.pause();
+                    emergencyAudio.currentTime = 0;
+                    alarmPlaying = false;
+                }
+            } catch (e) {
+                console.log("Khong reset duoc canh bao", e);
+            }
+        });
+    }
+
+    pollEmergencyStatus();
+    pollLiveWorkout();
+    setInterval(pollEmergencyStatus, 1000);
+    setInterval(pollLiveWorkout, 1200);
+</script>
+</main>
+{% endblock %}
