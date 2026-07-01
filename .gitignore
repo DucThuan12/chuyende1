@@ -1,0 +1,18 @@
+# Thu muc moi truong ao tren may ca nhan
+venv/
+
+# Cache cua Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Database local, khi deploy cloud se dung DATABASE_URL rieng
+*.db
+instance/
+
+# File cau hinh rieng cua may ca nhan
+.env
+
+# Log va file tam
+*.log
+data/logs/

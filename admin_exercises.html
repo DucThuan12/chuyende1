@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="admin-shell">
+    <aside class="admin-sidebar">
+        <div class="sidebar-top">
+            <a class="brand-link" href="{{ url_for('home') }}">
+            <div class="brand-badge small">FitMotion</div></a>
+            <p class="sidebar-sub">Quản trị hệ thống</p>
+        </div>
+
+        <nav class="sidebar-menu">
+            <a class="menu-item" href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+            <a class="menu-item active" href="{{ url_for('admin_exercises') }}">Quản lý bài tập</a>
+        </nav>
+    </aside>
+
+    <section class="admin-content">
+        <header class="admin-topbar">
+            <div>
+                <p class="panel-tag">Quản lý bài tập</p>
+                <h1>Danh sách bài tập</h1>
+            </div>
+
+            <div class="user-menu glass-chip">
+                <span>{{ user.name }}</span>
+                <a href="{{ url_for('logout') }}">Đăng xuất</a>
+            </div>
+        </header>
+
+        <section class="panel">
+            
+            <div class="panel-head" style="display: flex; gap: 16px; align-items: stretch;">
+                <form method="GET" style="display: flex; gap: 12px; flex: 1;">
+                    <input type="text" name="q" value="{{ keyword }}" placeholder="Tìm theo tên, slug, nhóm cơ..." style="flex: 1; height: 44px; margin: 0;">
+                    <button type="submit" class="btn btn-primary" style="height: 44px; display: inline-flex; align-items: center; white-space: nowrap;">Tìm kiếm</button>
+                </form>
+
+                <a class="btn" href="{{ url_for('admin_add_exercise') }}" style="background-color: var(--accent); color: white; height: 44px; display: inline-flex; align-items: center; white-space: nowrap;">Thêm bài tập</a>
+            </div>
+            <div class="exercise-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tên bài tập</th>
+                            <th>Slug</th>
+                            <th>Nhóm cơ</th>
+                            <th>Độ khó</th>
+                            <th>FBX</th>
+                            <th>Trạng thái</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ex in exercises %}
+                        <tr>
+                            <td>{{ ex.name }}</td>
+                            <td>{{ ex.slug }}</td>
+                            <td>{{ ex.muscle_group }}</td>
+                            <td>{{ ex.difficulty }}</td>
+                            <td>{{ "Có" if ex.fbx_path else "Chưa có" }}</td>
+                            <td>{{ "Hoạt động" if ex.is_active else "Ẩn" }}</td>
+                            <td>
+                                <a class="table-link" href="{{ url_for('admin_exercise_detail', exercise_id=ex.id) }}">Chi tiết</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </section>
+</div>
+{% endblock %}

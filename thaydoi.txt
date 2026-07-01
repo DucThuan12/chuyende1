@@ -1,0 +1,14 @@
+Cac phan toi da chinh cho bai Chuyen de 1
+
+1. Doi huong de tai thanh Website quan ly giao an tap luyen.
+2. Giu lai nen Flask, SQLAlchemy, dang nhap, dang ky, ho so, user va admin.
+3. Them cau hinh DATABASE_URL de co the dung SQLite o local va PostgreSQL khi deploy cloud.
+4. Them che do chay cloud nhe, tranh viec he thong bi dung khi cloud khong co webcam hoac thieu thu vien YOLO.
+5. Bo sung cac API JSON phuc vu yeu cau RESTful API.
+6. Them file api.md de dua vao phan API Documentation.
+7. Them file dulieu.sql lam database script.
+8. Them Procfile, runtime.txt va requirements.txt ban nhe de deploy Render.
+9. Giu danh sach thu vien day du trong yeucaudaydu.txt neu muon chay module AI o may ca nhan.
+10. Them baocao.md, huongdan.md va kiemthu.md de lam noi dung ho tro viet bao cao, demo va kiem thu.
+
+Ghi chu: Phan AI nhan dien tu the van co trong source, nhung trong pham vi mon Chuyen de 1 toi uu tien demo cac chuc nang full stack, database, API, phan quyen va cloud.

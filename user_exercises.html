@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block body %}
+<header class="topbar modern-topbar">
+    <div class="brand-wrap">
+        <a class="brand-link" href="{{ url_for('home') }}">
+    <div class="brand-badge small">FitMotion</div></a>
+    </div>
+
+    <nav class="nav-center modern-nav">
+        <a class="nav-link" href="{{ url_for('user_dashboard') }}">Tổng quan</a>
+        <a class="nav-link active" href="{{ url_for('user_exercises') }}">Động tác</a>
+        <a class="nav-link" href="{{ url_for('user_profile') }}">Hồ sơ</a>
+    </nav>
+
+    <div class="user-menu glass-chip">
+        <span>{{ user.name }}</span>
+        <a href="{{ url_for('logout') }}">Đăng xuất</a>
+    </div>
+</header>
+
+<main class="dashboard-page">
+    <section class="hero-panel">
+        <div class="hero-left">
+            <p class="eyebrow">Thư viện động tác</p>
+            <h1>Danh sách bài tập</h1>
+            <p class="hero-text">Tìm kiếm, xem hướng dẫn và mở trực tiếp khu vực luyện tập.</p>
+        </div>
+    </section>
+
+    <section class="panel">
+        <form method="GET" class="inline-form">
+            <input type="text" name="q" value="{{ keyword }}" placeholder="Tìm theo tên bài tập, nhóm cơ, mô tả...">
+            <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+        </form>
+    </section>
+
+    <section class="exercise-grid">
+        {% for ex in exercises %}
+        <div class="exercise-card">
+            <div class="exercise-head">
+                <h3>{{ ex.name }}</h3>
+                <span class="difficulty-pill">{{ ex.difficulty }}</span>
+            </div>
+
+            <p class="exercise-desc">{{ ex.description }}</p>
+
+            <div class="exercise-meta">
+                <div><strong>Nhóm cơ:</strong> {{ ex.muscle_group }}</div>
+                <div><strong>Độ tuổi:</strong> {{ ex.age_min }} - {{ ex.age_max }}</div>
+                <div><strong>Calo/rep:</strong> {{ ex.calories }}</div>
+            </div>
+
+            <div class="exercise-actions">
+                <a class="btn btn-primary" href="{{ url_for('user_workout', slug=ex.slug) }}">Luyện tập</a>
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+</main>
+{% endblock %}
